@@ -38,10 +38,10 @@
   var ZEN_SCALE = 0.45;         // 静观模式拉远到多少
   // 引力透镜的观感参数：盘几乎是侧视的，所以直接像被压得很扁；
   // 背面来的光绕过黑洞后被压向光子环，在上、下各形成一道拱
-  var LENS_Q_BAND = 0.20;       // 直接像的压扁系数
-  var LENS_Q_PART = 0.46;       // 粒子（盘里的物质）按同一视角压扁
-  var LENS_ARCH_Q = 1.0;        // 透镜像几乎是圆的：压扁了就全被阴影挡住了
+  var LENS_ARCH_Q = 1.0;        // 透镜像几乎是圆的（引力把像"撑圆"了）
   var LENS_ARCH_K = 0.09;       // 透镜像半径向光子环压缩的比例（越小越贴着阴影）
+  var tiltDeg = 63;             // 视角：0° = 俯视（盘是圆的），80° = 近侧视（盘压成一条）
+  var squash = Math.cos(tiltDeg * Math.PI / 180);   // 盘的投影压扁系数（粒子、发光带共用）
   var DISK_BINS = 16;
 
   function rgbaOf(rgb, a) { return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + a.toFixed(3) + ')'; }
@@ -643,6 +643,8 @@
   }
 
   // 把盘里的物质按半径分箱，得到一条沿半径的亮度曲线
+  function diskSquash() { return clamp(squash, 0.14, 1); }
+
   function diskBins(w, rIn, rOut, counts) {
     var i;
     for (i = 0; i < DISK_BINS; i++) counts[i] = 0;
@@ -688,7 +690,7 @@
       gb.addColorStop(1, rgbaOf(colo, bo * 0.045));
       ctx.fillStyle = gb;
       ctx.beginPath();
-      ctx.ellipse(bh.x, bh.y, r, r * LENS_Q_BAND, 0, 0, 6.2832);
+      ctx.ellipse(bh.x, bh.y, r, r * diskSquash(), 0, 0, 6.2832);
       ctx.fill();
     }
 
@@ -701,11 +703,14 @@
       var ba = brightAt(ai);
       if (ba < 0.02) continue;
       var cola = diskColor(ai / (DISK_BINS - 1));
+      // 越接近侧视，上下两道拱越突出；俯视时就是均匀的一圈
+      var peak = clamp((tiltDeg - 12) / 45, 0, 1);
+      var hiA = lerp(0.11, 0.30, peak), loA = lerp(0.05, 0.045, peak);
       var gt = ctx.createLinearGradient(bh.x, bh.y - ri, bh.x, bh.y + ri);
-      gt.addColorStop(0, rgbaOf(cola, ba * 0.30));
-      gt.addColorStop(0.42, rgbaOf(cola, ba * 0.05));
-      gt.addColorStop(0.58, rgbaOf(cola, ba * 0.04));
-      gt.addColorStop(1, rgbaOf(cola, ba * 0.20));
+      gt.addColorStop(0, rgbaOf(cola, ba * hiA));
+      gt.addColorStop(0.42, rgbaOf(cola, ba * loA));
+      gt.addColorStop(0.58, rgbaOf(cola, ba * loA));
+      gt.addColorStop(1, rgbaOf(cola, ba * lerp(0.09, 0.20, peak)));
       ctx.strokeStyle = gt;
       ctx.lineWidth = 7;
       ctx.beginPath();                                   // 整圈：上下亮、两侧暗
@@ -825,12 +830,13 @@
       // 喷流：画成一束，而不是一串点
       if (p.kind === 'jet') {
         var jl = clamp(p.life / p.maxLife, 0, 1);
+        var jf = 0.3 + 0.7 * Math.sin(clamp(tiltDeg, 0, 80) * Math.PI / 180);   // 越接近俯视越短
         ctx.globalCompositeOperation = 'lighter';
         ctx.strokeStyle = withAlpha('#dff0ff', jl * 0.5);
         ctx.lineWidth = p.r * 1.5;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x - p.vx * 0.05, p.y - p.vy * 0.05);
+        ctx.lineTo(p.x - p.vx * 0.05 * jf, p.y - p.vy * 0.05 * jf);
         ctx.stroke();
         ctx.globalCompositeOperation = 'source-over';
       }
@@ -839,8 +845,8 @@
         var sc = p.r * (3.4 + hot * 5.5);
         ctx.globalAlpha = 0.35 + hot * 0.6;
         if (p.kind !== 'jet' && !w.lensOff) {
-          var gy = bh.y + (p.y - bh.y) * LENS_Q_PART;
-          ctx.drawImage(spr, p.x - sc / 2, gy - sc * LENS_Q_PART / 2, sc, sc * LENS_Q_PART);
+          var gy = bh.y + (p.y - bh.y) * diskSquash();
+          ctx.drawImage(spr, p.x - sc / 2, gy - sc * diskSquash() / 2, sc, sc * diskSquash());
         } else {
           ctx.drawImage(spr, p.x - sc / 2, p.y - sc / 2, sc, sc);
         }
@@ -850,10 +856,10 @@
       var pr = p.r * (1 + hot * 0.25);
       if (p.kind !== 'jet' && !w.lensOff) {
         // 盘里的物质按同一视角压扁，看起来才是"一个盘"而不是一团球
-        var sy = bh.y + (p.y - bh.y) * LENS_Q_PART;
+        var sy = bh.y + (p.y - bh.y) * diskSquash();
         ctx.save();
         ctx.translate(p.x, sy);
-        ctx.scale(1, LENS_Q_PART);
+        ctx.scale(1, diskSquash());
         ctx.beginPath(); ctx.arc(0, 0, pr, 0, 6.2832); ctx.fill();
         ctx.restore();
       } else {
@@ -1083,6 +1089,21 @@
   // ---- 时间流速 / 画面大小 滑块 ----
   var timeEl = $('time'), timeV = $('time-v'), sizeEl = $('size'), sizeV = $('size-v');
   function getTimeScale() { return timeScale; }
+  var tiltEl = $('tilt'), tiltV = $('tilt-v');
+  function getTilt() { return tiltDeg; }
+  function getSquash() { return diskSquash(); }
+  function applyTilt() {
+    if (!tiltEl) return;
+    tiltDeg = clamp(parseFloat(tiltEl.value), 0, 80);
+    squash = Math.cos(tiltDeg * Math.PI / 180);
+    if (tiltV) {
+      tiltV.textContent = Math.round(tiltDeg) + '°';
+      tiltV.title = tiltDeg < 20 ? '俯视：盘是圆的' : (tiltDeg > 55 ? '近侧视：盘压成一条，透镜拱最明显' : '斜视');
+    }
+    try { localStorage.setItem('blackhole.tilt', String(tiltDeg)); } catch (e) {}
+  }
+  if (tiltEl) tiltEl.addEventListener('input', applyTilt);
+
   var lensEl = $('lens');
   function isLensOn() { return !(lensEl && !lensEl.checked); }
   function applyLens() {
@@ -1094,7 +1115,10 @@
   try {
     var lSaved = localStorage.getItem('blackhole.lens');
     if (lSaved !== null && lensEl) lensEl.checked = lSaved === '1';
+    var tSaved2 = parseFloat(localStorage.getItem('blackhole.tilt') || '');
+    if (tSaved2 >= 0 && tiltEl) tiltEl.value = String(tSaved2);
   } catch (e) {}
+  applyTilt();
   applyLens();
   function applyTimeScale() {
     if (!timeEl) return;
@@ -1270,6 +1294,8 @@
     show(null);
     var pSize = parseFloat(params.get('size') || '');
     if (pSize > 0 && sizeEl) { sizeEl.value = String(pSize); applyViewSize(); }
+    var pTilt = parseFloat(params.get('tilt') || '');
+    if (!isNaN(pTilt) && tiltEl) { tiltEl.value = String(pTilt); applyTilt(); }
     if (params.get('lens') === '0' && lensEl) { lensEl.checked = false; applyLens(); }
     var pTime = parseFloat(params.get('time') || '');
     if (pTime > 0 && timeEl) { timeEl.value = String(Math.round(pTime * 100)); applyTimeScale(); }
@@ -1615,6 +1641,28 @@
     try { renderWorld(lensW, ctx); } catch (e) { lensOK = false; }
     check('有粒子贴着盘时渲染不报错', lensOK);
 
+    // 27) 视角滑块：投影系数要跟着变，而且粒子和发光带用同一个
+    var tiltEl2 = document.getElementById('tilt');
+    check('视角滑块存在', !!tiltEl2 && !!document.getElementById('tilt-v'));
+    if (tiltEl2) {
+      var tOld2 = tiltEl2.value;
+      tiltEl2.value = '0'; tiltEl2.dispatchEvent(new Event('input', { bubbles: true }));
+      check('视角 0° 时是俯视（投影系数 ≈ 1）', Math.abs(getSquash() - 1) < 0.01, getSquash().toFixed(2));
+      tiltEl2.value = '78'; tiltEl2.dispatchEvent(new Event('input', { bubbles: true }));
+      check('视角 78° 时接近侧视（投影系数 < 0.3）', getSquash() < 0.3, getSquash().toFixed(2));
+      check('投影系数下限有保护（不会压成 0）', getSquash() >= 0.14, getSquash().toFixed(2));
+      var rErr3 = '';
+      try { renderWorld(createWorld(1234), ctx); } catch (e) { rErr3 = e.message; }
+      check('侧视下渲染不报错', rErr3 === '', rErr3);
+      tiltEl2.value = '0';
+      tiltEl2.dispatchEvent(new Event('input', { bubbles: true }));
+      var rErr4 = '';
+      try { renderWorld(createWorld(1234), ctx); } catch (e) { rErr4 = e.message; }
+      check('俯视下渲染不报错', rErr4 === '', rErr4);
+      tiltEl2.value = tOld2;
+      tiltEl2.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
     var json = JSON.stringify(results, null, 1);
     if (selftestEl) { selftestEl.hidden = false; selftestEl.textContent = json; }
     document.title = (results.pass ? 'SELFTEST PASS' : 'SELFTEST FAIL') + ' ' +
@@ -1634,7 +1682,7 @@
     createWorld: createWorld, stepWorld: stepWorld, renderWorld: renderWorld,
     pulse: pulse, spawnCluster: spawnCluster, runBot: runBot, input: input,
     toggleZen: toggleZen, spawnBinary: spawnBinary, dissolveNebula: dissolveNebula,
-    isLensOn: isLensOn, renderWorld: renderWorld,
+    isLensOn: isLensOn, renderWorld: renderWorld, getTilt: getTilt, getSquash: getSquash,
     getTimeScale: getTimeScale,
     getGame: function () { return game; }, getMode: function () { return mode; }
   };
