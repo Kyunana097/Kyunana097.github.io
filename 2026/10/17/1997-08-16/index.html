@@ -14,8 +14,9 @@
 <meta property="og:description" content="NIST 曲线的种子藏了二十五年，最后发现它只是一个时间戳。1997 年 8 月 16 日 01:52:34 UTC，有人跑了一个程序。">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://www.kyunana.com/images/curve-seed/cover.png">
+<meta property="og:image" content="https://www.kyunana.com/images/curve-seed/timeline.png">
 <meta property="article:published_time" content="2026-10-17T04:20:00.000Z">
-<meta property="article:modified_time" content="2026-10-17T04:20:00.000Z">
+<meta property="article:modified_time" content="2026-10-17T05:15:00.000Z">
 <meta property="article:author" content="Kyunana">
 <meta property="article:tag" content="deepseek-flash">
 <meta property="article:tag" content="密码学">
@@ -269,8 +270,8 @@
         <a class="nexmoefont icon-calendar-fill">2026年10月17日</a>
         
         
-    <a><i class="nexmoefont icon-areachart"></i>约2.2k字</a>
-    <a><i class="nexmoefont icon-time-circle-fill"></i>预计需要7分钟</a>
+    <a><i class="nexmoefont icon-areachart"></i>约2.6k字</a>
+    <a><i class="nexmoefont icon-time-circle-fill"></i>预计需要9分钟</a>
 
     </div>
     
@@ -344,6 +345,8 @@
 </tr>
 </tbody>
 </table>
+<p><img onerror="imgOnError(this);" data-fancybox="gallery" src="/images/curve-seed/timeline.png" alt="十个素数域种子的播种时间线" data-caption="十个素数域种子的播种时间；P-256 落在 1997-08-16 01:52:34 UTC" loading="lazy"></p>
+<p style="text-align:center;color:#8a8a8a;font-size:0.9em;">十个素数域种子的播种时间。每个点是一次 <code>srand48()</code>；P-256 落在 1997 年 8 月 16 日凌晨。</p>
 <p>没有哈希。没有玩笑话。没有计数器。程序只是用当前时间播了种，然后一遍一遍地抽 20 个字节，直到抽出一条可用的曲线。</p>
 <h2 id="sec4"><a href="#sec4" class="headerlink" title="四、凌晨一点五十二分"></a>四、凌晨一点五十二分</h2>
 <p>P-256 的种子是第 1842 个候选。按每个候选 20 字节算，大约是 36 KB 的随机数输出——对 1997 年的机器来说，连一秒都用不了。真正花时间的不是算，是等：大多数候选都生不出素数阶的曲线，只能重来。</p>
@@ -363,7 +366,13 @@
 <h2 id="sec6"><a href="#sec6" class="headerlink" title="六、还没解出来的部分"></a>六、还没解出来的部分</h2>
 <p>故事没有完全结束。B-163 的种子仍然对不上模型试过的所有生成方式；P-224、P-256、P-384、P-521 的基点（base point）是怎么选的，也还没有答案。模型只解出了六条曲线的基点：它们来自 Arjen Lenstra 的 FreeLIP 大整数库，种子是 20000、20420、20507 这样的小整数。那是另一件旧工具留下的指纹。</p>
 <p>还有一个小细节：P-256 的第 876 个候选其实也能生成一条可用的曲线，但标准用的是第 1842 个。为什么跳过前一个？不知道。可能是当时还检查了别的性质，也可能只是程序多跑了一会儿。这个空白很小，但很真实——它提醒你，历史不是被设计出来的，历史是被执行出来的。</p>
-<h2 id="sec7"><a href="#sec7" class="headerlink" title="七、后记"></a>七、后记</h2>
+<h2 id="sec7"><a href="#sec7" class="headerlink" title="七、补记：名字与噪声"></a>七、补记：名字与噪声</h2>
+<p>文章发出去之后，我又把 Filippo Valsorda 的后续读了一遍。他给出了几个我上一节没舍得放下的细节。</p>
+<p>悬赏是在 2026 年 10 月 15 日 01:07:51 UTC 被正式认领的——又一个时间戳。团队把 36,864 美元捐给了 ISRG，也就是运营 Let&#39;s Encrypt 的非营利组织。Steve Weis 在 Hacker News 上只留了一句话：「十三年份的锡箔帽，就为了一个 <code>srand48(time(NULL))</code>。」Tom Ptacek 接了一句：「这对整整一代 NIST 密码学阴谋论来说，是毁灭性的消息。」</p>
+<p>但故事并不是「完全没事」。Filippo 算了一笔账：即使 NSA 当年可以自由挑选 1997–98 年间的任意时间戳、以及前 16 个素数阶候选，他们也只有大约 30 位的自由度——不足以实施 Bernstein 和 Lange 在 2017 年描述的那种、需要 70 位自由度的假设性攻击。这大概就是「可验证地随机」真正能给出的东西：不是「绝对没有后门」，而是「后门需要多大的自由度，而这个数字不够」。</p>
+<p>还有一组种子，连这种计算都不需要。ANSI X9.62 里几条二进制曲线的种子，十六进制写出来是 <code>4D696E67687561...</code>——那是 ASCII 的 <code>MinghuaQu</code>，一位密码学家的名字。不管是有意还是顺手，一个名字就这样留在了标准里。和那个 1997 年的时间戳放在一起看，这些数字忽然不像数学，更像一批没有寄出的签名。</p>
+<p>至于 B-163 那个至今对不上的种子，有人猜是当年誊写时打错了一位。这个解释很朴素，也很像人会干的事。</p>
+<h2 id="sec8"><a href="#sec8" class="headerlink" title="八、后记"></a>八、后记</h2>
 <p>今天我们打开一个网页，浏览器和服务器握手，签一个名，验证通过，那把小锁亮起来。整个过程不到一秒。你不会看到曲线，也不会看到种子。但在最底下，有一条 1997 年 8 月 16 日凌晨的时间戳，安静地待在一个 160 位的数字里。</p>
 <p>我们总把密码学想象成一块没有时间的石头：数学是永恒的，参数是任意的，信任来自证明。可这次的故事说，石头里也可能夹着一张便签，上面写着「我当时在加班」。</p>
 <p>1997 年 8 月 16 日 01:52:34 UTC，有人跑了一个程序。二十多年后，一个模型在半小时里把这件事读了出来。</p>
@@ -374,6 +383,7 @@
 <p><strong>资料来源</strong>：</p>
 <ul>
 <li>Anthropic, <em>Claude reveals ECDSA curve origins</em>, 2026-10-16</li>
+<li>Filippo Valsorda, <em>The NIST Elliptic Curves Seeds Bounty Has Been Claimed</em>, 2026-10-16</li>
 <li>Filippo Valsorda, <em>Announcing the $12k NIST Elliptic Curves Seeds Bounty</em>, 2023-10-05</li>
 <li>Stephen A. Weis, <em>How were the NIST ECDSA curve parameters generated?</em>, 2023-09（2026 年更新）</li>
 <li>Neal Koblitz &amp; Alfred Menezes, <em>A Riddle Wrapped in an Enigma</em>, 2015</li>
@@ -413,7 +423,7 @@
             <button class="mdui-fab catalog" style="overflow:unset;">
                 <i class="nexmoefont icon-i-catalog"></i>
                 <div class="nexmoe-toc">
-                    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#sec1"><span class="toc-number">1.</span> <span class="toc-text">一、一把小锁下面的数字</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec2"><span class="toc-number">2.</span> <span class="toc-text">二、一个关于笑话的传说</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec3"><span class="toc-number">3.</span> <span class="toc-text">三、它认出了一台旧机器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec4"><span class="toc-number">4.</span> <span class="toc-text">四、凌晨一点五十二分</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec5"><span class="toc-number">5.</span> <span class="toc-text">五、模型为什么会解出来</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec6"><span class="toc-number">6.</span> <span class="toc-text">六、还没解出来的部分</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec7"><span class="toc-number">7.</span> <span class="toc-text">七、后记</span></a></li></ol>
+                    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#sec1"><span class="toc-number">1.</span> <span class="toc-text">一、一把小锁下面的数字</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec2"><span class="toc-number">2.</span> <span class="toc-text">二、一个关于笑话的传说</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec3"><span class="toc-number">3.</span> <span class="toc-text">三、它认出了一台旧机器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec4"><span class="toc-number">4.</span> <span class="toc-text">四、凌晨一点五十二分</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec5"><span class="toc-number">5.</span> <span class="toc-text">五、模型为什么会解出来</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec6"><span class="toc-number">6.</span> <span class="toc-text">六、还没解出来的部分</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec7"><span class="toc-number">7.</span> <span class="toc-text">七、补记：名字与噪声</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#sec8"><span class="toc-number">8.</span> <span class="toc-text">八、后记</span></a></li></ol>
                 </div>
             </button>
             
